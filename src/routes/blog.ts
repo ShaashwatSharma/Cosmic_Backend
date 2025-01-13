@@ -14,56 +14,10 @@ export const blogRouter = new Hono<{
     authorId:string;
   }
 }>();
-
 // good practive to add pagination
 
 
-blogRouter.use("/*", async (c, next) => {
-  const prisma = new PrismaClient({
-    datasourceUrl: c.env.DATABASE_URL,
-  }).$extends(withAccelerate());
-
-  try {
-    // const prisma = c.get("prisma");
-    const header = c.req.header("authorization") || "";
-    const token = header.split(" ")[1];
-    const user = await verify(token, c.env.JWT_PASSWORD);
-    if (!user) {
-      c.status(403);
-      return c.json({ error: "Unauthourized" });
-    }
-    const userId: string = user.id as string;
-    c.set("authorId", userId);
-
-    // for some reason this gives a ts error so use the above two line of code 
-    // c.set("authorId",user.id);
-
-    await next();
-  } catch (e) {
-    c.status(404);
-    return c.json({ msg: "Error while Authenticating" });
-  }
-});
-
-blogRouter.post("/delete",async(c)=>{
-  const prisma = new PrismaClient({
-    datasourceUrl: c.env.DATABASE_URL,
-  }).$extends(withAccelerate());
-try{
-
-  const body= await c.req.json();
-  await prisma.post.delete({
-    where:{
-      id:body.id
-    }
-  })
-  return c.json({msg:"Deleted"})
-}catch(e){
- return c.json({msg:"error"})
-}
-});
-
-
+//get all blogs
 blogRouter.get("/bulk", async (c) => {
     const prisma = new PrismaClient({
         datasourceUrl: c.env.DATABASE_URL,
@@ -115,6 +69,95 @@ blogRouter.get("/bulk", async (c) => {
 //   return c.json({msg:"Error while fetching all blogs "})
 // }
 });
+
+
+
+// // get a specific blog based on the blog id (without :)->
+blogRouter.get("/:id", async (c) => {
+    const prisma = new PrismaClient({
+        datasourceUrl: c.env.DATABASE_URL,
+      }).$extends(withAccelerate());
+try{
+  const blogid= parseInt( c.req.param('id'));
+    const blog= await prisma.post.findUnique({
+        where:{
+            id:blogid
+        },
+        select:{
+          id:true,
+          title:true,
+          content:true
+        //   author:{
+        //     select:{
+        //       name:true
+        //     }
+        //   }
+        }
+    })
+    if(!blog){
+        c.status(404)
+        return c.json({msg:"No blog found"})
+    }
+    c.status(200)
+    return c.json({blog})
+}catch(e){
+    c.status(411)
+    console.log(e);
+    return c.json({msg:"Error while fetchng the blog"})
+}
+});
+
+
+
+
+//check for the auth
+blogRouter.use("/*", async (c, next) => {
+  const prisma = new PrismaClient({
+    datasourceUrl: c.env.DATABASE_URL,
+  }).$extends(withAccelerate());
+
+  try {
+    // const prisma = c.get("prisma");
+    const header = c.req.header("authorization") || "";
+    const token = header.split(" ")[1];
+    const user = await verify(token, c.env.JWT_PASSWORD);
+    if (!user) {
+      c.status(403);
+      return c.json({ error: "Unauthourized" });
+    }
+    const userId: string = user.id as string;
+    c.set("authorId", userId);
+
+    // for some reason this gives a ts error so use the above two line of code 
+    // c.set("authorId",user.id);
+
+    await next();
+  } catch (e) {
+    c.status(404);
+    return c.json({ msg: "Error while Authenticating" });
+  }
+});
+
+
+//delete a blog 
+blogRouter.post("/delete",async(c)=>{
+  const prisma = new PrismaClient({
+    datasourceUrl: c.env.DATABASE_URL,
+  }).$extends(withAccelerate());
+try{
+
+  const body= await c.req.json();
+  await prisma.post.delete({
+    where:{
+      id:body.id
+    }
+  })
+  return c.json({msg:"Deleted"})
+}catch(e){
+ return c.json({msg:"error"})
+}
+});
+
 
 // Add a new blog post ->
 blogRouter.post("/",async (c) => {
@@ -206,41 +249,5 @@ blogRouter.post("/",async (c) => {
 //     return c.json({msg:"Error whie updating your blog"})
 // }
 // });
-
-
-// // get a specific blog based on the blog id (without :)->
-blogRouter.get("/:id", async (c) => {
-    const prisma = new PrismaClient({
-        datasourceUrl: c.env.DATABASE_URL,
-      }).$extends(withAccelerate());
-try{
-  const blogid= parseInt( c.req.param('id'));
-    const blog= await prisma.post.findUnique({
-        where:{
-            id:blogid
-        },
-        select:{
-          id:true,
-          title:true,
-          content:true
-        //   author:{
-        //     select:{
-        //       name:true
-        //     }
-        //   }
-        }
-    })
-    if(!blog){
-        c.status(404)
-        return c.json({msg:"No blog found"})
-    }
-    c.status(200)
-    return c.json({blog})
-}catch(e){
-    c.status(411)
-    console.log(e);
-    return c.json({msg:"Error while fetchng the blog"})
-}
-});
 
 
