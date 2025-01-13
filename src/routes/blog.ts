@@ -230,6 +230,10 @@ try{
         //   }
         }
     })
+    if(!blog){
+        c.status(404)
+        return c.json({msg:"No blog found"})
+    }
     c.status(200)
     return c.json({blog})
 }catch(e){
